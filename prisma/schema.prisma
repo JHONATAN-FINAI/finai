@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Usuário
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  password            String
+  diagnosticoCompleto Boolean   @default(false)
+  currentMonth        Int?      // Mês atual ativo
+  currentYear         Int?      // Ano atual ativo
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  incomes           Income[]
+  expenses          Expense[]
+  debts             Debt[]
+  transactions      Transaction[]
+  plan              Plan?
+  categories        Category[]
+  monthlyCloses     MonthlyClose[]
+  goals             Goal[]
+  challenges        Challenge[]
+  alerts            Alert[]
+  chatMessages      ChatMessage[]
+  patterns          Pattern[]
+}
+
+// Categorias (globais + customizadas por usuário)
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  type        String    @default("NECESSIDADE") // NECESSIDADE, DESEJO, POUPANCA
+  icon        String?
+  isGlobal    Boolean   @default(false)
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  expenses    Expense[]
+  transactions Transaction[]
+  planCategories PlanCategory[]
+
+  @@unique([name, userId])
+}
+
+// Receitas
+model Income {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  amount         Float
+  recurrenceType String   // MENSAL, QUINZENAL, SEMANAL, UNICO
+  type           String   @default("FIXA") // FIXA, VARIAVEL
+  startMonth     Int?     // Mês de início
+  startYear      Int?     // Ano de início
+  endMonth       Int?     // Mês de término (para receitas únicas/temporárias)
+  endYear        Int?     // Ano de término
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Despesas fixas/variáveis cadastradas no diagnóstico
+model Expense {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  name           String
+  amount         Float
+  type           String   // FIXA, VARIAVEL
+  recurrenceType String   // MENSAL, QUINZENAL, SEMANAL, UNICO
+  startMonth     Int?     // Mês de início
+  startYear      Int?     // Ano de início
+  endMonth       Int?     // Mês de término (para despesas únicas/temporárias)
+  endYear        Int?     // Ano de término
+  dueDay         Int?     // dia do vencimento (1-31)
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Dívidas
+model Debt {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  type                  String   // CARTAO, EMPRESTIMO, FINANCIAMENTO, CHEQUE_ESPECIAL, OUTROS
+  totalBalance          Float
+  interestRate          Float?   // taxa de juros mensal
+  monthlyPayment        Float
+  remainingInstallments Int?
+  startMonth            Int?     // Mês de início do pagamento
+  startYear             Int?     // Ano de início do pagamento
+  dueDay                Int?     // dia do vencimento
+  status                String   @default("EM_DIA") // EM_DIA, ATRASADO, QUITADO
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// Transações diárias (gastos registrados)
+model Transaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  date          DateTime @default(now())
+  month         Int      // Mês da transação
+  year          Int      // Ano da transação
+  amount        Float
+  description   String
+  paymentMethod String   // PIX, CARTAO_CREDITO, CARTAO_DEBITO, DINHEIRO
+  createdAt     DateTime @default(now())
+}
+
+// Plano financeiro do usuário
+model Plan {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  needsPercent   Float    @default(50)
+  wantsPercent   Float    @default(30)
+  savingsPercent Float    @default(20)
+  totalIncome    Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  categories     PlanCategory[]
+}
+
+// Orçamento por categoria dentro do plano
+model PlanCategory {
+  id            String   @id @default(cuid())
+  planId        String
+  plan          Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  monthlyBudget Float
+  weeklyBudget  Float?
+  dailyBudget   Float?
+
+  @@unique([planId, categoryId])
+}
+
+// Fechamento mensal
+model MonthlyClose {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month           Int
+  year            Int
+  totalIncome     Float    // Total de receitas do mês
+  totalExpenses   Float    // Total de despesas fixas/variáveis
+  totalDebts      Float    // Total de parcelas de dívidas
+  totalTransactions Float  // Total de gastos registrados
+  balance         Float    // Saldo do mês
+  savingsRate     Float?   // Taxa de poupança do mês
+  status          String   @default("FECHADO") // ABERTO, FECHADO
+  incomeDetails   Json?    // Detalhes das receitas
+  expenseDetails  Json?    // Detalhes das despesas
+  debtDetails     Json?    // Detalhes das dívidas
+  transactionDetails Json? // Resumo de gastos por categoria
+  notes           String?
+  closedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, month, year])
+}
+
+// Metas financeiras
+model Goal {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  targetAmount  Float
+  currentAmount Float    @default(0)
+  deadline      DateTime?
+  priority      String   @default("MEDIA") // ALTA, MEDIA, BAIXA
+  status        String   @default("EM_ANDAMENTO") // EM_ANDAMENTO, CONCLUIDA, CANCELADA
+  aiPlan        Json?    // Plano gerado pela IA
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Desafios financeiros
+model Challenge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  type        String   // ECONOMIA, CONTROLE, HABITO
+  targetValue Float?
+  currentValue Float   @default(0)
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  status      String   @default("ATIVO") // ATIVO, CONCLUIDO, FALHOU
+  reward      String?
+  createdAt   DateTime @default(now())
+}
+
+// Histórico de conversas com IA
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // user, assistant
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+// Alertas configurados
+model Alert {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // ORCAMENTO, VENCIMENTO, META, PADRAO
+  title       String
+  message     String
+  threshold   Float?
+  categoryId  String?
+  isActive    Boolean  @default(true)
+  channel     String   @default("APP") // APP, EMAIL, WHATSAPP
+  lastSentAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// Padrões detectados pela IA
+model Pattern {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // GASTO_RECORRENTE, AUMENTO, SAZONALIDADE, ANOMALIA
+  description String
+  data        Json?
+  importance  String   @default("MEDIA") // ALTA, MEDIA, BAIXA
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}

@@ -4,17 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import AppLayout from "@/components/AppLayout"
-import { 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles,
-  TrendingUp,
-  AlertTriangle,
-  Target,
-  Loader2,
-  RefreshCw
-} from "lucide-react"
+import { Send, Bot, User, Sparkles, TrendingUp, AlertTriangle, Target, Loader2, RefreshCw, MessageSquare, Lightbulb, Trophy, Zap } from "lucide-react"
 
 interface Message {
   id: string
@@ -36,122 +26,57 @@ export default function AssistentePage() {
   const [activeTab, setActiveTab] = useState<'chat' | 'coaching' | 'insights'>('chat')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/")
-    }
-  }, [status, router])
+  useEffect(() => { if (status === "unauthenticated") router.push("/") }, [status, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
-      loadMessages()
-      loadPatterns()
-      loadPredictions()
-    }
+    if (status === "authenticated") { loadMessages(); loadPatterns(); loadPredictions() }
   }, [status])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 
-  const loadMessages = async () => {
-    try {
-      const res = await fetch("/api/ai/chat")
-      const data = await res.json()
-      setMessages(data.messages || [])
-    } catch (error) {
-      console.error("Erro ao carregar mensagens:", error)
-    }
-  }
-
-  const loadPatterns = async () => {
-    try {
-      const res = await fetch("/api/ai/patterns")
-      const data = await res.json()
-      setPatterns(data.patterns || [])
-    } catch (error) {
-      console.error("Erro ao carregar padrões:", error)
-    }
-  }
-
-  const loadPredictions = async () => {
-    try {
-      const res = await fetch("/api/ai/predict")
-      const data = await res.json()
-      setPredictions(data)
-    } catch (error) {
-      console.error("Erro ao carregar previsões:", error)
-    }
-  }
+  const loadMessages = async () => { try { const res = await fetch("/api/ai/chat"); const data = await res.json(); setMessages(data.messages || []) } catch (e) { console.error(e) } }
+  const loadPatterns = async () => { try { const res = await fetch("/api/ai/patterns"); const data = await res.json(); setPatterns(data.patterns || []) } catch (e) { console.error(e) } }
+  const loadPredictions = async () => { try { const res = await fetch("/api/ai/predict"); const data = await res.json(); setPredictions(data) } catch (e) { console.error(e) } }
 
   const loadCoaching = async () => {
     setLoadingCoaching(true)
-    try {
-      const res = await fetch("/api/ai/coaching")
-      const data = await res.json()
-      setCoaching(data.session)
-    } catch (error) {
-      console.error("Erro ao carregar coaching:", error)
-    }
+    try { const res = await fetch("/api/ai/coaching"); const data = await res.json(); setCoaching(data.session) } catch (e) { console.error(e) }
     setLoadingCoaching(false)
   }
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
-
     const userMessage = input.trim()
     setInput("")
     setLoading(true)
 
-    // Adicionar mensagem do usuário imediatamente
-    const tempUserMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userMessage,
-      createdAt: new Date().toISOString()
-    }
+    const tempUserMsg: Message = { id: Date.now().toString(), role: 'user', content: userMessage, createdAt: new Date().toISOString() }
     setMessages(prev => [...prev, tempUserMsg])
 
     try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage })
-      })
+      const res = await fetch("/api/ai/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMessage }) })
       const data = await res.json()
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.message,
-        createdAt: new Date().toISOString()
-      }
+      const assistantMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: data.message, createdAt: new Date().toISOString() }
       setMessages(prev => [...prev, assistantMsg])
-    } catch (error) {
-      console.error("Erro ao enviar mensagem:", error)
-    }
+    } catch (e) { console.error(e) }
     setLoading(false)
   }
 
-  const quickQuestions = [
-    "Quanto gastei este mês?",
-    "Como está meu orçamento?",
-    "Onde posso economizar?",
-    "Qual minha situação financeira?"
-  ]
+  const quickQuestions = ["Quanto gastei este mês?", "Como está meu orçamento?", "Onde posso economizar?", "Qual minha situação financeira?"]
 
   return (
     <AppLayout>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div>
           <h1 className="text-2xl font-bold text-gray-900">Assistente Financeiro</h1>
           <p className="text-gray-500">Converse com a IA sobre suas finanças</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
           {[
-            { id: 'chat', label: 'Chat', icon: Bot },
+            { id: 'chat', label: 'Chat', icon: MessageSquare },
             { id: 'coaching', label: 'Coaching', icon: Target },
             { id: 'insights', label: 'Insights', icon: Sparkles },
           ].map(tab => {
@@ -159,14 +84,11 @@ export default function AssistentePage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as any)
-                  if (tab.id === 'coaching' && !coaching) loadCoaching()
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
+                onClick={() => { setActiveTab(tab.id as any); if (tab.id === 'coaching' && !coaching) loadCoaching() }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all ${
                   activeTab === tab.id 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-white text-gray-900 shadow-sm font-medium' 
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -178,21 +100,18 @@ export default function AssistentePage() {
 
         {/* Chat Tab */}
         {activeTab === 'chat' && (
-          <div className="bg-white rounded-2xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)' }}>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-12">
-                  <Bot className="w-16 h-16 text-blue-200 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Olá! Sou seu assistente financeiro</h3>
-                  <p className="text-gray-500 mb-6">Pergunte qualquer coisa sobre suas finanças</p>
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-400 via-pink-400 to-rose-400 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20">
+                    <Bot className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Olá! Sou seu assistente financeiro</h3>
+                  <p className="text-gray-500 mb-8">Pergunte qualquer coisa sobre suas finanças pessoais</p>
                   <div className="flex flex-wrap justify-center gap-2">
                     {quickQuestions.map((q, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setInput(q)}
-                        className="px-3 py-2 bg-blue-50 text-blue-600 text-sm rounded-lg hover:bg-blue-100"
-                      >
+                      <button key={i} onClick={() => setInput(q)} className="px-4 py-2.5 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 text-sm font-medium rounded-xl hover:shadow-md transition-all">
                         {q}
                       </button>
                     ))}
@@ -201,27 +120,18 @@ export default function AssistentePage() {
               )}
 
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}
-                >
+                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-500/20">
+                      <Bot className="w-5 h-5 text-white" />
                     </div>
                   )}
-                  <div
-                    className={`max-w-[70%] p-4 rounded-2xl ${
-                      msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
+                  <div className={`max-w-[70%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-gray-100 text-gray-900'}`}>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
                   {msg.role === 'user' && (
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-gray-600" />
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20">
+                      <User className="w-5 h-5 text-white" />
                     </div>
                   )}
                 </div>
@@ -229,33 +139,32 @@ export default function AssistentePage() {
 
               {loading && (
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+                    <Bot className="w-5 h-5 text-white" />
                   </div>
                   <div className="bg-gray-100 p-4 rounded-2xl">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+              <div className="flex gap-3">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                   placeholder="Digite sua pergunta..."
-                  className="flex-1 px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="flex-1 px-5 py-3.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                 />
-                <button
-                  onClick={sendMessage}
-                  disabled={loading || !input.trim()}
-                  className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button onClick={sendMessage} disabled={loading || !input.trim()} className="px-5 py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50">
                   <Send className="w-5 h-5" />
                 </button>
               </div>
@@ -265,73 +174,85 @@ export default function AssistentePage() {
 
         {/* Coaching Tab */}
         {activeTab === 'coaching' && (
-          <div className="bg-white rounded-2xl p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Sessão de Coaching</h2>
-              <button
-                onClick={loadCoaching}
-                disabled={loadingCoaching}
-                className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl"
-              >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900">Sessão de Coaching</h2>
+              </div>
+              <button onClick={loadCoaching} disabled={loadingCoaching} className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors">
                 <RefreshCw className={`w-4 h-4 ${loadingCoaching ? 'animate-spin' : ''}`} />
                 Atualizar
               </button>
             </div>
 
             {loadingCoaching ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-                <p className="text-gray-500 mt-4">Preparando sua sessão de coaching...</p>
+              <div className="text-center py-16">
+                <div className="w-12 h-12 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-500">Preparando sua sessão de coaching...</p>
               </div>
             ) : coaching ? (
               <div className="space-y-6">
-                <div className="p-4 bg-blue-50 rounded-xl">
+                <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                   <p className="text-lg text-gray-900">{coaching.greeting}</p>
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-gray-900 mb-2">Análise da Situação</h3>
-                  <p className="text-gray-600">{coaching.situationAnalysis}</p>
+                  <h3 className="font-bold text-gray-900 mb-3">Análise da Situação</h3>
+                  <p className="text-gray-600 leading-relaxed">{coaching.situationAnalysis}</p>
                 </div>
 
                 {coaching.wins?.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-green-600 mb-2">🎉 Vitórias</h3>
-                    <ul className="space-y-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Trophy className="w-5 h-5 text-emerald-600" />
+                      <h3 className="font-bold text-emerald-600">Vitórias</h3>
+                    </div>
+                    <div className="space-y-2">
                       {coaching.wins.map((win: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
-                          <span className="text-green-500">✓</span>
+                        <div key={i} className="flex items-start gap-3 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                          <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs font-bold">✓</span>
+                          </div>
                           <span className="text-gray-700">{win}</span>
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
                 {coaching.challenges?.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-orange-600 mb-2">⚡ Desafios</h3>
-                    <ul className="space-y-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-5 h-5 text-amber-600" />
+                      <h3 className="font-bold text-amber-600">Desafios</h3>
+                    </div>
+                    <div className="space-y-2">
                       {coaching.challenges.map((challenge: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2 p-3 bg-orange-50 rounded-lg">
-                          <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5" />
+                        <div key={i} className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                           <span className="text-gray-700">{challenge}</span>
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )}
 
                 {coaching.actionItems?.length > 0 && (
                   <div>
-                    <h3 className="font-bold text-blue-600 mb-2">📋 Plano de Ação</h3>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Lightbulb className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-bold text-blue-600">Plano de Ação</h3>
+                    </div>
                     <div className="space-y-3">
                       {coaching.actionItems.map((item: any, i: number) => (
-                        <div key={i} className="p-4 border rounded-xl">
+                        <div key={i} className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-sm transition-shadow">
                           <p className="font-medium text-gray-900">{item.action}</p>
                           <p className="text-sm text-gray-500 mt-1">{item.why}</p>
                           {item.deadline && (
-                            <p className="text-xs text-blue-600 mt-2">Prazo: {item.deadline}</p>
+                            <span className="inline-block mt-2 px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg">Prazo: {item.deadline}</span>
                           )}
                         </div>
                       ))}
@@ -339,13 +260,15 @@ export default function AssistentePage() {
                   </div>
                 )}
 
-                <div className="p-4 bg-purple-50 rounded-xl">
+                <div className="p-5 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
                   <p className="text-purple-900 font-medium">{coaching.motivation}</p>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Target className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Target className="w-8 h-8 text-gray-300" />
+                </div>
                 <p className="text-gray-500">Clique em "Atualizar" para iniciar uma sessão de coaching</p>
               </div>
             )}
@@ -355,40 +278,37 @@ export default function AssistentePage() {
         {/* Insights Tab */}
         {activeTab === 'insights' && (
           <div className="space-y-6">
-            {/* Previsões */}
             {predictions && predictions.alertMessage && (
-              <div className={`p-6 rounded-2xl ${
-                predictions.overallRisk === 'ALTO' ? 'bg-red-50 border border-red-200' :
-                predictions.overallRisk === 'MEDIO' ? 'bg-yellow-50 border border-yellow-200' :
-                'bg-green-50 border border-green-200'
+              <div className={`p-6 rounded-2xl border ${
+                predictions.overallRisk === 'ALTO' ? 'bg-red-50 border-red-200' :
+                predictions.overallRisk === 'MEDIO' ? 'bg-amber-50 border-amber-200' :
+                'bg-emerald-50 border-emerald-200'
               }`}>
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className={`w-6 h-6 flex-shrink-0 ${
-                    predictions.overallRisk === 'ALTO' ? 'text-red-500' :
-                    predictions.overallRisk === 'MEDIO' ? 'text-yellow-500' :
-                    'text-green-500'
-                  }`} />
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    predictions.overallRisk === 'ALTO' ? 'bg-red-500' :
+                    predictions.overallRisk === 'MEDIO' ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`}>
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">Previsão do Mês</h3>
-                    <p className="text-gray-700 mt-1">{predictions.alertMessage}</p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      {predictions.daysRemaining} dias restantes no mês
-                    </p>
+                    <h3 className="font-bold text-gray-900 mb-1">Previsão do Mês</h3>
+                    <p className="text-gray-700">{predictions.alertMessage}</p>
+                    <p className="text-sm text-gray-500 mt-2">{predictions.daysRemaining} dias restantes no mês</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Padrões Detectados */}
-            <div className="bg-white rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Padrões Detectados</h2>
-                <button
-                  onClick={loadPatterns}
-                  className="text-blue-600 text-sm hover:underline"
-                >
-                  Atualizar
-                </button>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">Padrões Detectados</h2>
+                </div>
+                <button onClick={loadPatterns} className="text-orange-600 text-sm font-medium hover:underline">Atualizar</button>
               </div>
 
               {patterns.length > 0 ? (
@@ -396,30 +316,35 @@ export default function AssistentePage() {
                   {patterns.map((pattern, i) => (
                     <div key={i} className={`p-4 rounded-xl border-l-4 ${
                       pattern.importance === 'ALTA' ? 'border-red-500 bg-red-50' :
-                      pattern.importance === 'MEDIA' ? 'border-yellow-500 bg-yellow-50' :
+                      pattern.importance === 'MEDIA' ? 'border-amber-500 bg-amber-50' :
                       'border-blue-500 bg-blue-50'
                     }`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                           pattern.type === 'ANOMALIA' ? 'bg-red-200 text-red-700' :
-                          pattern.type === 'AUMENTO' ? 'bg-orange-200 text-orange-700' :
-                          'bg-blue-200 text-blue-700'
+                          pattern.type === 'AUMENTO' ? 'bg-orange-200 text-orange-700' : 'bg-blue-200 text-blue-700'
                         }`}>
                           {pattern.type}
                         </span>
-                        <span className="text-sm font-medium text-gray-900">{pattern.title}</span>
+                        <span className="font-semibold text-gray-900">{pattern.title}</span>
                       </div>
                       <p className="text-sm text-gray-600">{pattern.description}</p>
                       {pattern.suggestion && (
-                        <p className="text-sm text-blue-600 mt-2">💡 {pattern.suggestion}</p>
+                        <div className="flex items-start gap-2 mt-3 p-3 bg-white/60 rounded-lg">
+                          <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-gray-700">{pattern.suggestion}</span>
+                        </div>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-gray-500 py-8">
-                  Nenhum padrão detectado ainda. Continue registrando suas transações.
-                </p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-500">Nenhum padrão detectado ainda. Continue registrando suas transações.</p>
+                </div>
               )}
             </div>
           </div>

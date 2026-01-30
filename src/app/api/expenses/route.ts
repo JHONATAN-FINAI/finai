@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession()
     if (!session?.user?.email) {
@@ -17,8 +17,15 @@ export async function GET() {
       return NextResponse.json({ expenses: [] })
     }
 
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type')
+
     const expenses = await prisma.expense.findMany({
-      where: { userId: user.id, isActive: true },
+      where: { 
+        userId: user.id, 
+        isActive: true,
+        ...(type && { type })
+      },
       include: { category: true },
       orderBy: { createdAt: 'desc' }
     })

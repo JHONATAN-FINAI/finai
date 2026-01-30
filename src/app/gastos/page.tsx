@@ -7,6 +7,14 @@ import AppLayout from "@/components/AppLayout"
 import { Plus, Trash2, AlertTriangle, X, Sparkles, Loader2, ChevronDown, ChevronUp, CreditCard } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
+// Categorias tipicamente fixas que devem ser excluídas
+const FIXED_CATEGORY_NAMES = [
+  "Assinaturas",
+  "Serviços Essenciais",
+  "Moradia",
+  "Educação"
+]
+
 export default function GastosPage() {
   const { status } = useSession()
   const router = useRouter()
@@ -20,6 +28,7 @@ export default function GastosPage() {
   const [budgets, setBudgets] = useState<Record<string, number>>({})
   const [spending, setSpending] = useState<Record<string, number>>({})
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [fixedCategoryIds, setFixedCategoryIds] = useState<Set<string>>(new Set())
   
   const [form, setForm] = useState({
     description: "",
@@ -46,30 +55,55 @@ export default function GastosPage() {
         const month = now.getMonth() + 1
         const year = now.getFullYear()
 
-        const [transRes, catRes, planRes] = await Promise.all([
+        const [transRes, catRes, planRes, expensesRes] = await Promise.all([
           fetch(`/api/transactions?month=${month}&year=${year}`),
           fetch("/api/categories"),
-          fetch("/api/plan")
+          fetch("/api/plan"),
+          fetch("/api/expenses?type=FIXA")
         ])
 
         const transData = await transRes.json()
         const catData = await catRes.json()
         const planData = await planRes.json()
+        const expensesData = await expensesRes.json()
 
         setTransactions(transData.transactions || [])
         setCategories(catData.categories || [])
 
-        // Carregar orçamentos
+        // Identificar categorias de despesas fixas
+        const fixedCatIds = new Set<string>()
+        
+        // Adicionar categorias de despesas fixas cadastradas
+        expensesData.expenses?.forEach((exp: any) => {
+          if (exp.categoryId) {
+            fixedCatIds.add(exp.categoryId)
+          }
+        })
+        
+        // Adicionar categorias por nome típico de despesas fixas
+        catData.categories?.forEach((cat: any) => {
+          if (FIXED_CATEGORY_NAMES.includes(cat.name)) {
+            fixedCatIds.add(cat.id)
+          }
+        })
+        
+        setFixedCategoryIds(fixedCatIds)
+
+        // Carregar orçamentos (excluindo categorias de despesas fixas)
         const newBudgets: Record<string, number> = {}
         planData.plan?.categories?.forEach((pc: any) => {
-          newBudgets[pc.categoryId] = pc.monthlyBudget
+          if (!fixedCatIds.has(pc.categoryId)) {
+            newBudgets[pc.categoryId] = pc.monthlyBudget
+          }
         })
         setBudgets(newBudgets)
 
-        // Calcular gastos por categoria
+        // Calcular gastos por categoria (apenas variáveis)
         const newSpending: Record<string, number> = {}
         transData.transactions?.forEach((t: any) => {
-          newSpending[t.categoryId] = (newSpending[t.categoryId] || 0) + t.amount
+          if (!fixedCatIds.has(t.categoryId)) {
+            newSpending[t.categoryId] = (newSpending[t.categoryId] || 0) + t.amount
+          }
         })
         setSpending(newSpending)
       } catch (error) {
@@ -98,6 +132,7 @@ export default function GastosPage() {
           mode: "transaction"
         })
       })
+      
       const data = await res.json()
       
       if (data.success && data.categoryId) {
@@ -224,6 +259,12 @@ export default function GastosPage() {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId)
   }
 
+  // Filtrar categorias para exibição (excluindo as de despesas fixas)
+  const variableCategories = categories.filter(cat => !fixedCategoryIds.has(cat.id))
+
+  // Filtrar transações variáveis
+  const variableTransactions = transactions.filter(t => !fixedCategoryIds.has(t.categoryId))
+
   const totalSpent = Object.values(spending).reduce((sum, v) => sum + v, 0)
   const totalBudget = Object.values(budgets).reduce((sum, v) => sum + v, 0)
 
@@ -244,7 +285,7 @@ export default function GastosPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Controle de Gastos</h1>
-            <p className="text-gray-500">Registre e acompanhe seus gastos diários</p>
+            <p className="text-gray-500">Registre e acompanhe seus gastos variáveis</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
@@ -272,7 +313,7 @@ export default function GastosPage() {
           </div>
           <div className="bg-white p-5 rounded-xl">
             <p className="text-sm text-gray-500 mb-1">Transações</p>
-            <p className="text-2xl font-bold text-gray-900">{transactions.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{variableTransactions.length}</p>
           </div>
         </div>
 
@@ -280,7 +321,7 @@ export default function GastosPage() {
         <h2 className="text-lg font-bold text-gray-900 mb-4">Gastos por Categoria</h2>
         <p className="text-sm text-gray-500 mb-4">Clique em uma categoria para ver os gastos detalhados</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {categories.map(cat => {
+          {variableCategories.map(cat => {
             const budget = budgets[cat.id] || 0
             const spent = spending[cat.id] || 0
             const percent = budget > 0 ? (spent / budget) * 100 : 0
@@ -348,19 +389,21 @@ export default function GastosPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{t.description}</p>
                             <p className="text-xs text-gray-500">
-                              {new Date(t.date).toLocaleDateString('pt-BR')} • {t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : t.paymentMethod}
+                              {new Date(t.date).toLocaleDateString("pt-BR")} • {
+                                t.paymentMethod === 'PIX' ? 'Pix' : 
+                                t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
+                                t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
+                                t.paymentMethod
+                              }
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 ml-2">
-                            <p className="text-sm font-semibold text-red-600">{formatCurrency(t.amount)}</p>
+                          <div className="flex items-center gap-3 ml-2">
+                            <span className="text-sm font-semibold text-red-600">{formatCurrency(t.amount)}</span>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteTransaction(t.id, t.categoryId, t.amount)
-                              }}
-                              className="text-gray-400 hover:text-red-500 p-1"
+                              onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id, t.categoryId, t.amount); }}
+                              className="p-1 text-gray-400 hover:text-red-500"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
@@ -379,27 +422,25 @@ export default function GastosPage() {
           })}
         </div>
 
-        {/* Lista de Transações Recentes */}
+        {/* Últimas Transações */}
         <div className="bg-white rounded-xl p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Últimas Transações</h2>
-          
-          {transactions.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">Nenhum gasto registrado este mês</p>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Últimos Gastos</h2>
+          {variableTransactions.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">Nenhum gasto registrado ainda.</p>
           ) : (
-            <div className="space-y-3">
-              {transactions.slice(0, 10).map(t => (
-                <div key={t.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="font-medium text-gray-900">{t.description}</p>
-                      <p className="text-sm text-gray-500">
-                        {t.category?.name} • {new Date(t.date).toLocaleDateString('pt-BR')} • {
-                          t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
-                          t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
-                          t.paymentMethod
-                        }
-                      </p>
-                    </div>
+            <div className="divide-y">
+              {variableTransactions.slice(0, 10).map(t => (
+                <div key={t.id} className="flex items-center justify-between py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{t.description}</p>
+                    <p className="text-sm text-gray-500">
+                      {t.category?.name} • {new Date(t.date).toLocaleDateString("pt-BR")} • {
+                        t.paymentMethod === 'PIX' ? 'Pix' : 
+                        t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
+                        t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
+                        t.paymentMethod
+                      }
+                    </p>
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="font-bold text-red-600">{formatCurrency(t.amount)}</p>
@@ -412,9 +453,9 @@ export default function GastosPage() {
                   </div>
                 </div>
               ))}
-              {transactions.length > 10 && (
+              {variableTransactions.length > 10 && (
                 <p className="text-center text-sm text-gray-500 pt-2">
-                  Mostrando 10 de {transactions.length} transações
+                  Mostrando 10 de {variableTransactions.length} transações
                 </p>
               )}
             </div>

@@ -2,10 +2,10 @@
   "name": "FinAI - Gestão Financeira Inteligente",
   "short_name": "FinAI",
   "description": "Controle suas finanças com inteligência artificial",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#10B981",
   "orientation": "portrait-primary",
   "icons": [
     {

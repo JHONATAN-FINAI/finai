@@ -1,18 +1,65 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563eb"/>
-      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    <!-- Gradiente principal verde-esmeralda para azul -->
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981"/>
+      <stop offset="50%" style="stop-color:#0EA5E9"/>
+      <stop offset="100%" style="stop-color:#6366F1"/>
     </linearGradient>
+    <!-- Gradiente para brilho -->
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+    <!-- Sombra -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#10B981" flood-opacity="0.3"/>
+    </filter>
+    <!-- Glow para sparkles -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="102" fill="url(#bg)"/>
-  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" 
-        font-family="Arial, sans-serif" font-weight="bold" font-size="192" fill="white">
-    F
-  </text>
-  <circle cx="368" cy="144" r="64" fill="#10b981"/>
-  <text x="368" y="156" dominant-baseline="middle" text-anchor="middle" 
-        font-family="Arial, sans-serif" font-weight="bold" font-size="48" fill="white">
-    AI
-  </text>
+  
+  <!-- Fundo com cantos arredondados -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#mainGrad)" filter="url(#shadow)"/>
+  
+  <!-- Brilho superior -->
+  <rect x="32" y="32" width="448" height="224" rx="96" fill="url(#shineGrad)"/>
+  
+  <!-- Gráfico de barras crescentes -->
+  <g fill="#ffffff" opacity="0.95">
+    <!-- Barra 1 -->
+    <rect x="120" y="320" width="48" height="80" rx="8"/>
+    <!-- Barra 2 -->
+    <rect x="184" y="260" width="48" height="140" rx="8"/>
+    <!-- Barra 3 -->
+    <rect x="248" y="200" width="48" height="200" rx="8"/>
+    <!-- Barra 4 (maior) -->
+    <rect x="312" y="140" width="48" height="260" rx="8"/>
+  </g>
+  
+  <!-- Linha de tendência -->
+  <path d="M144 300 L208 240 L272 180 L336 120" 
+        stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
+  
+  <!-- Círculo no topo da linha -->
+  <circle cx="336" cy="120" r="12" fill="#ffffff"/>
+  
+  <!-- Sparkle IA (estrela 4 pontas) - superior direito -->
+  <g filter="url(#glow)" fill="#ffffff">
+    <path d="M400 80 L406 94 L420 100 L406 106 L400 120 L394 106 L380 100 L394 94 Z"/>
+  </g>
+  
+  <!-- Sparkle menor -->
+  <g filter="url(#glow)" fill="#ffffff" opacity="0.8">
+    <path d="M420 140 L423 148 L431 151 L423 154 L420 162 L417 154 L409 151 L417 148 Z" transform="scale(0.8) translate(52 17)"/>
+  </g>
+  
+  <!-- Círculo decorativo pequeno -->
+  <circle cx="100" cy="100" r="8" fill="#ffffff" opacity="0.5"/>
 </svg>

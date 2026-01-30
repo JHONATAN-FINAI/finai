@@ -1,20 +1,30 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563eb"/>
-      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981"/>
+      <stop offset="50%" style="stop-color:#0EA5E9"/>
+      <stop offset="100%" style="stop-color:#6366F1"/>
     </linearGradient>
   </defs>
-  <!-- Background completo para maskable -->
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <!-- Conteúdo centralizado com padding seguro (80% da área) -->
-  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" 
-        font-family="Arial, sans-serif" font-weight="bold" font-size="160" fill="white">
-    F
-  </text>
-  <circle cx="340" cy="170" r="50" fill="#10b981"/>
-  <text x="340" y="180" dominant-baseline="middle" text-anchor="middle" 
-        font-family="Arial, sans-serif" font-weight="bold" font-size="36" fill="white">
-    AI
-  </text>
+  
+  <!-- Fundo completo para maskable -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#mainGrad)"/>
+  
+  <!-- Conteúdo centralizado (safe zone 80%) -->
+  <g transform="translate(51, 51) scale(0.8)">
+    <!-- Barras -->
+    <g fill="#ffffff" opacity="0.95">
+      <rect x="120" y="320" width="48" height="80" rx="8"/>
+      <rect x="184" y="260" width="48" height="140" rx="8"/>
+      <rect x="248" y="200" width="48" height="200" rx="8"/>
+      <rect x="312" y="140" width="48" height="260" rx="8"/>
+    </g>
+    
+    <!-- Linha -->
+    <path d="M144 300 L208 240 L272 180 L336 120" stroke="#ffffff" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.9"/>
+    <circle cx="336" cy="120" r="12" fill="#ffffff"/>
+    
+    <!-- Sparkle -->
+    <path d="M400 80 L406 94 L420 100 L406 106 L400 120 L394 106 L380 100 L394 94 Z" fill="#ffffff"/>
+  </g>
 </svg>

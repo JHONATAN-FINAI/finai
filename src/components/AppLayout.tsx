@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Bell,
   Calendar,
-  History
+  History,
+  CreditCard
 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
@@ -33,6 +34,7 @@ const menuItems = [
   { href: "/relatorio", label: "Relatório", icon: FileText },
   { href: "/planejamento", label: "Planejamento", icon: PieChart },
   { href: "/gastos", label: "Gastos", icon: Receipt },
+  { href: "/compromissos", label: "Compromissos", icon: CreditCard },
   { href: "/novo-mes", label: "Novo Mês", icon: Calendar },
   { href: "/historico", label: "Histórico", icon: History },
   { href: "/metas", label: "Metas", icon: Target },

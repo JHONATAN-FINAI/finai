@@ -16,6 +16,7 @@ model User {
   diagnosticoCompleto Boolean   @default(false)
   currentMonth        Int?      // Mês atual ativo
   currentYear         Int?      // Ano atual ativo
+  closingDay          Int?      // Dia de fechamento do cartão (1-31)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

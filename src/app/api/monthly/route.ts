@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ history })
     }
 
-    // Buscar dados de um mês específico
+    // Buscar dados de um mês específico do histórico
     if (action === 'month') {
       const month = parseInt(searchParams.get('month') || '')
       const year = parseInt(searchParams.get('year') || '')
@@ -43,31 +43,25 @@ export async function GET(request: Request) {
         where: { userId_month_year: { userId: user.id, month, year } }
       })
 
-      return NextResponse.json({ monthlyClose })
+      // Buscar transações daquele mês (para histórico detalhado)
+      const transactions = await prisma.transaction.findMany({
+        where: { userId: user.id, month, year },
+        include: { category: true },
+        orderBy: { date: 'desc' }
+      })
+
+      return NextResponse.json({ monthlyClose, transactions })
     }
 
-    // Retornar mês atual do usuário
+    // Retornar mês atual do usuário (SEM verificação automática de virada de mês)
     const now = new Date()
     const currentMonth = user.currentMonth || now.getMonth() + 1
     const currentYear = user.currentYear || now.getFullYear()
 
-    // Verificar se precisa fechar mês anterior
-    const realMonth = now.getMonth() + 1
-    const realYear = now.getFullYear()
-    
-    let needsClose = false
-    if (user.currentMonth && user.currentYear) {
-      if (realYear > user.currentYear || (realYear === user.currentYear && realMonth > user.currentMonth)) {
-        needsClose = true
-      }
-    }
-
     return NextResponse.json({ 
       currentMonth, 
       currentYear,
-      realMonth,
-      realYear,
-      needsClose,
+      closingDay: user.closingDay,
       diagnosticoCompleto: user.diagnosticoCompleto
     })
   } catch (error) {
@@ -93,9 +87,23 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { action, month, year } = body
+    const { action, month, year, closingDay } = body
 
-    // Fechar mês
+    // Atualizar dia de fechamento do cartão
+    if (action === 'setClosingDay') {
+      if (!closingDay || closingDay < 1 || closingDay > 31) {
+        return NextResponse.json({ error: "Dia de fechamento inválido (1-31)" }, { status: 400 })
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { closingDay }
+      })
+
+      return NextResponse.json({ success: true, closingDay })
+    }
+
+    // Fechar mês atual e iniciar novo
     if (action === 'close') {
       const closeMonth = month || user.currentMonth
       const closeYear = year || user.currentYear
@@ -152,12 +160,13 @@ export async function POST(request: Request) {
       const savingsRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0
 
       // Criar resumo por categoria
-      const transactionsByCategory: Record<string, { name: string, total: number }> = {}
+      const transactionsByCategory: Record<string, { name: string, total: number, count: number }> = {}
       transactions.forEach(t => {
         if (!transactionsByCategory[t.categoryId]) {
-          transactionsByCategory[t.categoryId] = { name: t.category.name, total: 0 }
+          transactionsByCategory[t.categoryId] = { name: t.category.name, total: 0, count: 0 }
         }
         transactionsByCategory[t.categoryId].total += t.amount
+        transactionsByCategory[t.categoryId].count += 1
       })
 
       // Criar ou atualizar fechamento
@@ -212,7 +221,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, monthlyClose })
     }
 
-    // Iniciar novo mês
+    // Iniciar novo mês (após fechar o anterior)
     if (action === 'new') {
       const newMonth = month
       const newYear = year

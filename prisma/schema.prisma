@@ -120,8 +120,10 @@ model Transaction {
   categoryId    String
   category      Category @relation(fields: [categoryId], references: [id])
   date          DateTime @default(now())
-  month         Int      // Mês da transação
-  year          Int      // Ano da transação
+  month         Int      // Mês real da transação
+  year          Int      // Ano real da transação
+  billingMonth  Int?     // Mês da fatura (para cartão de crédito)
+  billingYear   Int?     // Ano da fatura (para cartão de crédito)
   amount        Float
   description   String
   paymentMethod String   // PIX, CARTAO_CREDITO, CARTAO_DEBITO, DINHEIRO

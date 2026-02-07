@@ -4,8 +4,10 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import AppLayout from "@/components/AppLayout"
-import { Plus, Trash2, AlertTriangle, X, Sparkles, Loader2, ChevronDown, ChevronUp, CreditCard } from "lucide-react"
+import { Plus, Trash2, AlertTriangle, X, Sparkles, Loader2, ChevronDown, ChevronUp, CreditCard, Calendar } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
+
+const MONTH_NAMES = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 export default function GastosPage() {
   const { status } = useSession()
@@ -20,6 +22,7 @@ export default function GastosPage() {
   const [budgets, setBudgets] = useState<Record<string, number>>({})
   const [spending, setSpending] = useState<Record<string, number>>({})
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [closingDay, setClosingDay] = useState<number | null>(null)
   
   const [form, setForm] = useState({
     description: "",
@@ -58,6 +61,7 @@ export default function GastosPage() {
 
         setTransactions(transData.transactions || [])
         setCategories(catData.categories || [])
+        setClosingDay(transData.closingDay || null)
 
         // Carregar orçamentos
         const newBudgets: Record<string, number> = {}
@@ -113,6 +117,24 @@ export default function GastosPage() {
       console.error("Erro na classificação:", error)
     }
     setClassifying(false)
+  }
+
+  // Calcula a fatura baseado na data e dia de fechamento
+  const getBillingInfo = (transactionDate: string, paymentMethod: string) => {
+    if (paymentMethod !== 'CARTAO_CREDITO' || !closingDay) return null
+    
+    const date = new Date(transactionDate)
+    const day = date.getDate()
+    const month = date.getMonth() + 1
+    const year = date.getFullYear()
+    
+    if (day > closingDay) {
+      if (month === 12) {
+        return { billingMonth: 1, billingYear: year + 1 }
+      }
+      return { billingMonth: month + 1, billingYear: year }
+    }
+    return { billingMonth: month, billingYear: year }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,6 +260,22 @@ export default function GastosPage() {
     )
   }
 
+  // Renderizar badge de fatura para cartão de crédito
+  const renderBillingBadge = (t: any) => {
+    const billing = t.billingMonth && t.billingYear 
+      ? { billingMonth: t.billingMonth, billingYear: t.billingYear }
+      : getBillingInfo(t.date, t.paymentMethod)
+    
+    if (!billing) return null
+    
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+        <Calendar className="w-3 h-3" />
+        Fatura {MONTH_NAMES[billing.billingMonth]}/{billing.billingYear.toString().slice(-2)}
+      </span>
+    )
+  }
+
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto">
@@ -254,6 +292,16 @@ export default function GastosPage() {
             <Plus className="w-5 h-5" /> Novo Gasto
           </button>
         </div>
+
+        {/* Info dia de fechamento */}
+        {closingDay && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-700">
+              Cartão fecha dia <strong>{closingDay}</strong>. Gastos no crédito após essa data vão para a fatura do mês seguinte.
+            </span>
+          </div>
+        )}
 
         {/* Resumo do Mês */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -348,14 +396,17 @@ export default function GastosPage() {
                         <div key={t.id} className="flex items-center justify-between p-3 border-b border-gray-100 last:border-b-0">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{t.description}</p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(t.date).toLocaleDateString("pt-BR")} • {
-                                t.paymentMethod === 'PIX' ? 'Pix' : 
-                                t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
-                                t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
-                                t.paymentMethod
-                              }
-                            </p>
+                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                              <span className="text-xs text-gray-500">
+                                {new Date(t.date).toLocaleDateString("pt-BR")} • {
+                                  t.paymentMethod === 'PIX' ? 'Pix' : 
+                                  t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
+                                  t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
+                                  t.paymentMethod
+                                }
+                              </span>
+                              {renderBillingBadge(t)}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 ml-2">
                             <span className="text-sm font-semibold text-red-600">{formatCurrency(t.amount)}</span>
@@ -393,14 +444,17 @@ export default function GastosPage() {
                 <div key={t.id} className="flex items-center justify-between py-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{t.description}</p>
-                    <p className="text-sm text-gray-500">
-                      {t.category?.name} • {new Date(t.date).toLocaleDateString("pt-BR")} • {
-                        t.paymentMethod === 'PIX' ? 'Pix' : 
-                        t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
-                        t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
-                        t.paymentMethod
-                      }
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-gray-500">
+                        {t.category?.name} • {new Date(t.date).toLocaleDateString("pt-BR")} • {
+                          t.paymentMethod === 'PIX' ? 'Pix' : 
+                          t.paymentMethod === 'CARTAO_CREDITO' ? 'Crédito' : 
+                          t.paymentMethod === 'CARTAO_DEBITO' ? 'Débito' : 
+                          t.paymentMethod
+                        }
+                      </span>
+                      {renderBillingBadge(t)}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="font-bold text-red-600">{formatCurrency(t.amount)}</p>
@@ -561,6 +615,25 @@ export default function GastosPage() {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Info da fatura */}
+                    {closingDay && form.date && (
+                      <div className="mt-3 p-2 bg-blue-100 border border-blue-300 rounded-lg">
+                        <p className="text-xs text-blue-800">
+                          {(() => {
+                            const billing = getBillingInfo(form.date, 'CARTAO_CREDITO')
+                            if (!billing) return null
+                            return (
+                              <>
+                                <Calendar className="w-3 h-3 inline mr-1" />
+                                Este gasto entrará na <strong>fatura de {MONTH_NAMES[billing.billingMonth]}/{billing.billingYear}</strong>
+                              </>
+                            )
+                          })()}
+                        </p>
+                      </div>
+                    )}
+
                     {form.installments > 1 && (
                       <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-xs text-amber-700">

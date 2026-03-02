@@ -34,14 +34,25 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [diagRes, planRes, transRes, monthRes, expRes, debtRes] = await Promise.all([
-          fetch("/api/diagnostico"), fetch("/api/plan"), fetch("/api/transactions"), fetch("/api/monthly"), fetch("/api/expenses?type=FIXA"), fetch("/api/debts")
-        ])
-        const [diagData, planData, transData, monthData, expData, debtData] = await Promise.all([diagRes.json(), planRes.json(), transRes.json(), monthRes.json(), expRes.json(), debtRes.json()])
+        // Primeiro, buscar mês atual
+        const monthRes = await fetch("/api/monthly")
+        const monthData = await monthRes.json()
+        
+        const currentMonth = monthData.currentMonth
+        const currentYear = monthData.currentYear
 
-        const now = new Date()
-        const realMonth = now.getMonth() + 1
-        const realYear = now.getFullYear()
+        // Agora buscar dados com filtro de mês
+        const [diagRes, planRes, transRes, expRes, debtRes] = await Promise.all([
+          fetch("/api/diagnostico"),
+          fetch("/api/plan"),
+          fetch(`/api/transactions?month=${currentMonth}&year=${currentYear}`),
+          fetch("/api/expenses?type=FIXA"),
+          fetch("/api/debts")
+        ])
+        
+        const [diagData, planData, transData, expData, debtData] = await Promise.all([
+          diagRes.json(), planRes.json(), transRes.json(), expRes.json(), debtRes.json()
+        ])
 
         const fixedExpenses = expData.expenses?.reduce((sum: number, e: any) => sum + e.amount, 0) || 0
         const debtsPayment = debtData.debts?.reduce((sum: number, d: any) => sum + d.monthlyPayment, 0) || 0
@@ -51,8 +62,8 @@ export default function DashboardPage() {
           analysis: diagData.analysis || {},
           plan: planData.plan,
           recentTransactions: transData.transactions?.slice(0, 5) || [],
-          currentMonth: monthData.currentMonth || realMonth,
-          currentYear: monthData.currentYear || realYear,
+          currentMonth,
+          currentYear,
           closingDay: monthData.closingDay || null,
           fixedExpenses, debtsPayment, variableSpending
         })
@@ -99,110 +110,126 @@ export default function DashboardPage() {
         </div>
 
         {!hasData ? (
-          <div className="bg-white rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4"><Wallet className="w-8 h-8 text-blue-600" /></div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Vamos começar seu diagnóstico financeiro</h2>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">Para ter acesso ao dashboard completo, primeiro precisamos conhecer sua situação financeira atual.</p>
-            <Link href="/diagnostico" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">Iniciar Diagnóstico<ArrowRight className="w-5 h-5" /></Link>
+          <div className="bg-white p-8 rounded-2xl text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+              <TrendingUp className="w-8 h-8 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Bem-vindo ao FinAI!</h2>
+            <p className="text-gray-500 mb-6">Para começar, faça o diagnóstico financeiro e veja insights personalizados.</p>
+            <Link href="/diagnostico" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+              Fazer Diagnóstico <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         ) : (
           <>
-            {/* Cards principais */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-                  <span className="text-sm text-gray-500">Receita Mensal</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-gray-500">Receitas</p>
+                  <TrendingUp className="w-5 h-5 text-green-600" />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(analysis.totalIncome || 0)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(analysis.totalIncome)}</p>
               </div>
 
-              <div className="bg-white rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><CreditCard className="w-5 h-5 text-blue-600" /></div>
-                  <span className="text-sm text-gray-500">Compromissos Fixos</span>
+              <div className="bg-white p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-gray-500">Compromissos Fixos</p>
+                  <Receipt className="w-5 h-5 text-orange-600" />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalCompromissos)}</p>
-                <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((totalCompromissos / (analysis.totalIncome || 1)) * 100, 100)}%` }}></div>
-                </div>
+                <p className="text-xs text-gray-500 mt-1">Fixas + Dívidas</p>
               </div>
 
-              <div className="bg-white rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center"><Receipt className="w-5 h-5 text-orange-600" /></div>
-                  <span className="text-sm text-gray-500">Gastos Variáveis</span>
+              <div className="bg-white p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-gray-500">Gastos Variáveis</p>
+                  <CreditCard className="w-5 h-5 text-blue-600" />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{formatCurrency(data?.variableSpending || 0)}</p>
-                <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(((data?.variableSpending || 0) / (analysis.totalIncome || 1)) * 100, 100)}%` }}></div>
-                </div>
-              </div>
-
-              <div className={`rounded-2xl p-5 ${(analysis.totalIncome || 0) - totalGasto >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${(analysis.totalIncome || 0) - totalGasto >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
-                    <Wallet className={`w-5 h-5 ${(analysis.totalIncome || 0) - totalGasto >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-                  </div>
-                  <span className="text-sm text-gray-500">Saldo Disponível</span>
-                </div>
-                <p className={`text-2xl font-bold ${(analysis.totalIncome || 0) - totalGasto >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency((analysis.totalIncome || 0) - totalGasto)}
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Mês atual</p>
               </div>
             </div>
 
-            {/* Dicas da IA */}
-            {aiTips.length > 0 && (
-              <div className="bg-purple-50 rounded-2xl p-6 mb-8">
-                <h3 className="font-bold text-purple-900 mb-3">Dicas da IA para você</h3>
-                <ul className="space-y-2">
-                  {aiTips.map((tip, i) => (
-                    <li key={i} className="flex items-start gap-2 text-purple-800">
-                      <span className="text-purple-500">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Ações rápidas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <Link href="/gastos" className="flex items-center gap-4 p-4 bg-white rounded-xl hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><Plus className="w-6 h-6 text-blue-600" /></div>
-                <div><p className="font-medium text-gray-900">Registrar Gasto</p><p className="text-sm text-gray-500">Adicione uma nova despesa</p></div>
-              </Link>
-              <Link href="/novo-mes" className="flex items-center gap-4 p-4 bg-white rounded-xl hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><Calendar className="w-6 h-6 text-green-600" /></div>
-                <div><p className="font-medium text-gray-900">Fechar Mês</p><p className="text-sm text-gray-500">Encerre e inicie novo período</p></div>
-              </Link>
-              <Link href="/historico" className="flex items-center gap-4 p-4 bg-white rounded-xl hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><History className="w-6 h-6 text-purple-600" /></div>
-                <div><p className="font-medium text-gray-900">Ver Histórico</p><p className="text-sm text-gray-500">Consulte meses anteriores</p></div>
-              </Link>
-            </div>
-
-            {/* Últimas transações */}
-            {data?.recentTransactions && data.recentTransactions.length > 0 && (
-              <div className="bg-white rounded-2xl p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-2xl">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Últimos Gastos</h3>
-                  <Link href="/gastos" className="text-blue-600 text-sm hover:underline">Ver todos</Link>
+                  <h2 className="text-lg font-bold text-gray-900">Saldo</h2>
+                  <Wallet className="w-5 h-5 text-gray-400" />
                 </div>
-                <div className="space-y-3">
-                  {data.recentTransactions.map((t: any) => (
-                    <div key={t.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                      <div>
-                        <p className="font-medium text-gray-900">{t.description}</p>
-                        <p className="text-sm text-gray-500">{t.category?.name} • {new Date(t.date).toLocaleDateString('pt-BR')}</p>
-                      </div>
-                      <p className="font-medium text-red-600">-{formatCurrency(t.amount)}</p>
+                <p className={`text-3xl font-bold ${analysis.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {formatCurrency(analysis.balance)}
+                </p>
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Composição</p>
+                  <p className="text-sm text-gray-700">Receitas - Compromissos - Gastos Variáveis</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatCurrency(analysis.totalIncome)} - {formatCurrency(totalCompromissos)} - {formatCurrency(data?.variableSpending || 0)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">Taxa de Poupança</h2>
+                  <TrendingUp className="w-5 h-5 text-gray-400" />
+                </div>
+                <p className={`text-3xl font-bold ${analysis.savingsRate >= 20 ? "text-green-600" : analysis.savingsRate >= 10 ? "text-yellow-600" : "text-red-600"}`}>
+                  {formatPercent(analysis.savingsRate)}
+                </p>
+                <div className="mt-4">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className={`h-2 rounded-full ${analysis.savingsRate >= 20 ? "bg-green-600" : analysis.savingsRate >= 10 ? "bg-yellow-600" : "bg-red-600"}`} style={{ width: `${Math.min(analysis.savingsRate, 100)}%` }}></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Meta: 20%</p>
+                </div>
+              </div>
+            </div>
+
+            {aiTips.length > 0 && (
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-2xl mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">AI</span>
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">Dicas Personalizadas</h2>
+                </div>
+                <div className="space-y-2">
+                  {aiTips.slice(0, 3).map((tip, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2"></div>
+                      <p className="text-sm text-gray-700">{tip}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            <div className="bg-white p-6 rounded-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">Últimos Gastos</h2>
+                <Link href="/gastos" className="text-sm text-blue-600 hover:text-blue-700">Ver todos</Link>
+              </div>
+              {data?.recentTransactions && data.recentTransactions.length > 0 ? (
+                <div className="space-y-3">
+                  {data.recentTransactions.map((t: any) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">{t.description}</p>
+                        <p className="text-xs text-gray-500">{t.category?.name || "Sem categoria"}</p>
+                      </div>
+                      <p className="font-bold text-gray-900">{formatCurrency(t.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">Nenhum gasto registrado ainda</p>
+                  <Link href="/gastos" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">
+                    <Plus className="w-4 h-4" /> Adicionar Gasto
+                  </Link>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

@@ -39,11 +39,11 @@ export default function DashboardPage() {
         const currentMonth = now.getMonth() + 1
         const currentYear = now.getFullYear()
 
-        // Buscar dados com filtro de mês real
+        // Buscar dados com filtro de mês (billing para incluir gastos que vão pra fatura deste mês)
         const [diagRes, planRes, transRes, expRes, debtRes, monthRes] = await Promise.all([
           fetch("/api/diagnostico"),
           fetch("/api/plan"),
-          fetch(`/api/transactions?month=${currentMonth}&year=${currentYear}`),
+          fetch(`/api/transactions?month=${currentMonth}&year=${currentYear}&billing=true`),
           fetch("/api/expenses?type=FIXA"),
           fetch("/api/debts"),
           fetch("/api/monthly")

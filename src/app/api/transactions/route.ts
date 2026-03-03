@@ -44,9 +44,14 @@ export async function GET(request: Request) {
 
     if (month && year) {
       if (filterByBilling) {
-        // Filtrar por mês de fatura (para cartão de crédito)
-        whereClause.billingMonth = parseInt(month)
-        whereClause.billingYear = parseInt(year)
+        // Filtrar por mês de fatura (cartão) OU mês real (outros pagamentos)
+        // Isso inclui:
+        // 1. Gastos de cartão que vão para a fatura deste mês (billingMonth = X)
+        // 2. Gastos de outros métodos feitos neste mês (billingMonth é null E month = X)
+        whereClause.OR = [
+          { billingMonth: parseInt(month), billingYear: parseInt(year) },
+          { billingMonth: null, month: parseInt(month), year: parseInt(year) }
+        ]
       } else {
         // Filtrar por mês real da transação
         whereClause.month = parseInt(month)

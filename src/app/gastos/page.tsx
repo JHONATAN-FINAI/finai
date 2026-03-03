@@ -50,7 +50,7 @@ export default function GastosPage() {
         const year = now.getFullYear()
 
         const [transRes, catRes, planRes] = await Promise.all([
-          fetch(`/api/transactions?month=${month}&year=${year}`),
+          fetch(`/api/transactions?month=${month}&year=${year}&billing=true`),
           fetch("/api/categories"),
           fetch("/api/plan")
         ])

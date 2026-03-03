@@ -46,7 +46,7 @@ export default function PlanejamentoPage() {
           fetch("/api/diagnostico"),
           fetch("/api/plan"),
           fetch("/api/categories"),
-          fetch(`/api/transactions?month=${month}&year=${year}`)
+          fetch(`/api/transactions?month=${month}&year=${year}&billing=true`)
         ])
 
         const diagData = await diagRes.json()

@@ -36,8 +36,10 @@ export default function PlanejamentoPage() {
         // Buscar mês atual primeiro
         const monthRes = await fetch("/api/monthly")
         const monthData = await monthRes.json()
-        const month = monthData.currentMonth
-        const year = monthData.currentYear
+        
+        const now = new Date()
+        const month = monthData.currentMonth || (now.getMonth() + 1)
+        const year = monthData.currentYear || now.getFullYear()
         
         setCurrentMonth(month)
         setCurrentYear(year)

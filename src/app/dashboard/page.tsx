@@ -38,8 +38,9 @@ export default function DashboardPage() {
         const monthRes = await fetch("/api/monthly")
         const monthData = await monthRes.json()
         
-        const currentMonth = monthData.currentMonth
-        const currentYear = monthData.currentYear
+        const now = new Date()
+        const currentMonth = monthData.currentMonth || (now.getMonth() + 1)
+        const currentYear = monthData.currentYear || now.getFullYear()
 
         // Agora buscar dados com filtro de mês
         const [diagRes, planRes, transRes, expRes, debtRes] = await Promise.all([

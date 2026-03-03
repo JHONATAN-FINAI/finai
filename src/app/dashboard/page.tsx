@@ -87,6 +87,7 @@ export default function DashboardPage() {
   const hasData = analysis.totalIncome > 0
   const totalCompromissos = (data?.fixedExpenses || 0) + (data?.debtsPayment || 0)
   const totalGasto = totalCompromissos + (data?.variableSpending || 0)
+  const savingsRate = analysis.savingsRate || 0
 
   return (
     <AppLayout>
@@ -174,12 +175,12 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-bold text-gray-900">Taxa de Poupança</h2>
                   <TrendingUp className="w-5 h-5 text-gray-400" />
                 </div>
-                <p className={`text-3xl font-bold ${analysis.savingsRate >= 20 ? "text-green-600" : analysis.savingsRate >= 10 ? "text-yellow-600" : "text-red-600"}`}>
-                  {formatPercent(analysis.savingsRate)}
+                <p className={`text-3xl font-bold ${savingsRate >= 20 ? "text-green-600" : savingsRate >= 10 ? "text-yellow-600" : "text-red-600"}`}>
+                  {formatPercent(savingsRate)}
                 </p>
                 <div className="mt-4">
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className={`h-2 rounded-full ${analysis.savingsRate >= 20 ? "bg-green-600" : analysis.savingsRate >= 10 ? "bg-yellow-600" : "bg-red-600"}`} style={{ width: `${Math.min(analysis.savingsRate, 100)}%` }}></div>
+                    <div className={`h-2 rounded-full ${savingsRate >= 20 ? "bg-green-600" : savingsRate >= 10 ? "bg-yellow-600" : "bg-red-600"}`} style={{ width: `${Math.min(savingsRate, 100)}%` }}></div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">Meta: 20%</p>
                 </div>

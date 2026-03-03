@@ -33,13 +33,10 @@ export default function PlanejamentoPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Buscar mês atual primeiro
-        const monthRes = await fetch("/api/monthly")
-        const monthData = await monthRes.json()
-        
+        // Usar mês real da data atual
         const now = new Date()
-        const month = monthData.currentMonth || (now.getMonth() + 1)
-        const year = monthData.currentYear || now.getFullYear()
+        const month = now.getMonth() + 1
+        const year = now.getFullYear()
         
         setCurrentMonth(month)
         setCurrentYear(year)

@@ -34,25 +34,23 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Primeiro, buscar mês atual
-        const monthRes = await fetch("/api/monthly")
-        const monthData = await monthRes.json()
-        
+        // Usar mês real da data atual
         const now = new Date()
-        const currentMonth = monthData.currentMonth || (now.getMonth() + 1)
-        const currentYear = monthData.currentYear || now.getFullYear()
+        const currentMonth = now.getMonth() + 1
+        const currentYear = now.getFullYear()
 
-        // Agora buscar dados com filtro de mês
-        const [diagRes, planRes, transRes, expRes, debtRes] = await Promise.all([
+        // Buscar dados com filtro de mês real
+        const [diagRes, planRes, transRes, expRes, debtRes, monthRes] = await Promise.all([
           fetch("/api/diagnostico"),
           fetch("/api/plan"),
           fetch(`/api/transactions?month=${currentMonth}&year=${currentYear}`),
           fetch("/api/expenses?type=FIXA"),
-          fetch("/api/debts")
+          fetch("/api/debts"),
+          fetch("/api/monthly")
         ])
         
-        const [diagData, planData, transData, expData, debtData] = await Promise.all([
-          diagRes.json(), planRes.json(), transRes.json(), expRes.json(), debtRes.json()
+        const [diagData, planData, transData, expData, debtData, monthData] = await Promise.all([
+          diagRes.json(), planRes.json(), transRes.json(), expRes.json(), debtRes.json(), monthRes.json()
         ])
 
         const fixedExpenses = expData.expenses?.reduce((sum: number, e: any) => sum + e.amount, 0) || 0

@@ -86,6 +86,10 @@ export default function DashboardPage() {
   const totalCompromissos = (data?.fixedExpenses || 0) + (data?.debtsPayment || 0)
   const totalGasto = totalCompromissos + (data?.variableSpending || 0)
   const savingsRate = analysis.savingsRate || 0
+  
+  // Calcular saldo: Receitas - Compromissos - Gastos Variáveis
+  const totalIncome = analysis.totalIncome || 0
+  const balance = totalIncome - totalCompromissos - (data?.variableSpending || 0)
 
   return (
     <AppLayout>
@@ -156,8 +160,8 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-bold text-gray-900">Saldo</h2>
                   <Wallet className="w-5 h-5 text-gray-400" />
                 </div>
-                <p className={`text-3xl font-bold ${analysis.balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {formatCurrency(analysis.balance)}
+                <p className={`text-3xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {formatCurrency(balance)}
                 </p>
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <p className="text-xs text-gray-500 mb-1">Composição</p>
